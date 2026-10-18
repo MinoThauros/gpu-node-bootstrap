@@ -1,0 +1,39 @@
+#cloud-config
+# Ubuntu Server 24.04 autoinstall for a GPU node.
+# Wipes ONLY the SSD whose serial matches __TARGET_DISK_SERIAL__ below. Every other disk is left alone:
+# if no disk matches, the install stops with an error instead of guessing.
+# The installer asks "Continue with autoinstall? (yes|no)" before touching anything.
+autoinstall:
+  version: 1
+  # You type these yourself at the console: keyboard layout, then name / hostname / username / password.
+  interactive-sections:
+    - keyboard
+    - identity
+  locale: en_US.UTF-8
+  timezone: America/Toronto
+  source:
+    id: ubuntu-server
+  # Wired Ethernet gets DHCP automatically (the default). Plug the cable in before booting.
+  storage:
+    layout:
+      name: direct
+      match:
+        ssd: true
+        serial: "*__TARGET_DISK_SERIAL__*"   # filled in by windows/make-installer-partition.ps1 (or by hand)
+  ssh:
+    install-server: true
+    allow-pw: true          # no SSH keys on GitHub yet; add one later and turn this off
+  updates: all
+  packages:
+    - curl
+    - gnupg
+    - pciutils
+    - htop
+    - ntfs-3g                # to read the old D: drive (pc-backup) later
+  late-commands:
+    - mkdir -p /target/opt/gpu-node
+    - cp /cdrom/nocloud/gpu-node-setup.sh /target/opt/gpu-node/gpu-node-setup.sh
+    - chmod +x /target/opt/gpu-node/gpu-node-setup.sh
+    - cp /cdrom/nocloud/gpu-node-setup.service /target/etc/systemd/system/gpu-node-setup.service
+    - curtin in-target --target=/target -- systemctl enable gpu-node-setup.service
+  shutdown: reboot

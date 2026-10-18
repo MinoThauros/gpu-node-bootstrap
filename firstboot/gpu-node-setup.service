@@ -1,0 +1,14 @@
+[Unit]
+Description=One-time GPU node setup (NVIDIA driver + container toolkit)
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/gpu-node-setup.done
+
+[Service]
+Type=oneshot
+ExecStart=/opt/gpu-node/gpu-node-setup.sh
+TimeoutStartSec=0
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target
