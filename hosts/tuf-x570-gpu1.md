@@ -35,4 +35,6 @@ Former Windows 10 desktop, converted to a k3s GPU node in October 2026.
 
 - [ ] Copy `pc-backup` off the WD disk to permanent storage, then repurpose the disk (e.g. k3s local storage).
 - [ ] Add SSH key, disable password login.
-- [ ] Join k3s as a GPU agent.
+- [ ] Join k3s as a GPU agent: `k3s/join-agent.sh` on the node, then `kubectl apply -f k3s/cluster/` ([../docs/join-cluster.md](../docs/join-cluster.md)).
+- [ ] Verify: `kubectl get nodes -L nvidia.com/gpu.present`, `nvidia.com/gpu: 1` in `kubectl describe node`, `gpu-test` pod logs show the RTX 5070 Ti.
+- [ ] Record here: node name, IP, k3s version, driver version.

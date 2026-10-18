@@ -1,9 +1,10 @@
 # gpu-node-bootstrap
 
-Turn a spare PC with an NVIDIA GPU into a headless Ubuntu Server node that is ready to join a k3s cluster.
+Turn a spare PC with an NVIDIA GPU into a headless Ubuntu Server node in an existing k3s cluster, with the GPU schedulable from Kubernetes.
 
-You end up with: **Ubuntu Server 24.04 LTS + SSH + NVIDIA driver + NVIDIA Container Toolkit**. Nothing else.
-Joining the cluster (k3s agent) is a separate, later step.
+1. **Install:** Ubuntu Server 24.04 LTS + SSH + NVIDIA driver + NVIDIA Container Toolkit. Nothing else.
+2. **Join:** k3s agent labelled `nvidia.com/gpu.present=true`, plus the cluster-side `RuntimeClass` and NVIDIA device plugin,
+   so pods can request `nvidia.com/gpu: 1`.
 
 ## How it works
 
@@ -15,6 +16,13 @@ make-installer-partition.ps1  ──►   autoinstall/user-data      ──►  
  • unpack Ubuntu ISO onto it         • you type keyboard + user       • NVIDIA Container Toolkit
  • add AUTOINSTALL boot entry        • wipes ONLY the target SSD      • reboot, never runs again
                                      • installs Ubuntu + SSH
+
+GPU node                                     k3s server (cluster side)
+────────                                     ─────────────────────────
+k3s/join-agent.sh                      ──►   kubectl apply -f k3s/cluster/
+ • checks nvidia-smi + container runtime      • RuntimeClass nvidia
+ • installs k3s agent, GPU label               • NVIDIA device plugin (GPU nodes only)
+ • confirms k3s found the nvidia runtime      • test pod: nvidia-smi via Kubernetes
 ```
 
 No USB stick needed: the installer boots from a small partition on a **different** disk than the one being wiped.
@@ -45,7 +53,17 @@ If you do have a USB stick, the same `autoinstall/` + `firstboot/` files work fr
 | `nvidia-persistenced` enabled | Keeps the GPU initialised between jobs (optional) |
 | one reboot | Loads the driver |
 
-**Not installed:** k3s, Docker, a desktop, the CUDA toolkit (containers bring their own CUDA).
+**Not installed:** Docker, a desktop, the CUDA toolkit (containers bring their own CUDA). k3s comes in the join step.
+
+**When joining** ([k3s/join-agent.sh](k3s/join-agent.sh) on the node, [k3s/cluster/](k3s/cluster/) on the cluster)
+
+| Item | Why |
+|---|---|
+| k3s agent (official `get.k3s.io` installer) | Joins the existing cluster; URL and token passed at run time, never stored in the repo |
+| node label `nvidia.com/gpu.present=true` | Lets GPU-only DaemonSets and workloads target the node |
+| `RuntimeClass nvidia` | Pods that set `runtimeClassName: nvidia` get the GPU; k3s keeps `runc` as the default |
+| NVIDIA k8s-device-plugin v0.20.1 | Advertises `nvidia.com/gpu` capacity on the node |
+| `gpu-test` pod (`k3s/cluster/test/`) | End-to-end check: runs `nvidia-smi` in a CUDA 12.8 container |
 
 **Defaults you may want to change** in `autoinstall/user-data`: timezone `America/Toronto`, locale `en_US.UTF-8`,
 SSH password login allowed (turn off once you've added a key).
@@ -69,6 +87,15 @@ SSH password login allowed (turn off once you've added a key).
 4. Plug in Ethernet, reboot, boot menu key (F8 on ASUS) → `UEFI: <installer disk>, Partition N`.
 5. Follow [docs/install-walkthrough.md](docs/install-walkthrough.md). About 30 minutes, mostly waiting.
 6. Log in and run `nvidia-smi`.
+7. Join the cluster: [docs/join-cluster.md](docs/join-cluster.md). On the node:
+   ```bash
+   sudo INSTALL_K3S_VERSION=<server's version> bash join-agent.sh --url https://<server-ip>:6443 --token-file /root/k3s-token
+   ```
+   then on the server:
+   ```bash
+   kubectl apply -f k3s/cluster/
+   kubectl apply -f k3s/cluster/test/gpu-test-pod.yaml && kubectl logs gpu-test
+   ```
 
 ## Layout
 
@@ -83,14 +110,22 @@ gpu-node-bootstrap/
 │   └── gpu-node-setup.service        systemd one-shot unit that runs it
 ├── windows/
 │   └── make-installer-partition.ps1  no-USB installer builder (run from the old Windows)
+├── k3s/
+│   ├── join-agent.sh                 run on the node: join k3s as a GPU agent
+│   └── cluster/                      apply from the cluster side: kubectl apply -f k3s/cluster/
+│       ├── 00-runtimeclass-nvidia.yaml
+│       ├── 10-nvidia-device-plugin.yaml
+│       └── test/
+│           └── gpu-test-pod.yaml     one-shot nvidia-smi pod (applied separately)
 ├── docs/
 │   ├── install-walkthrough.md        step by step, including what you type
-│   └── bios-settings.md              firmware settings and why
+│   ├── bios-settings.md              firmware settings and why
+│   └── join-cluster.md               token, join script, manifests, verify, troubleshooting
 └── hosts/
     └── tuf-x570-gpu1.md              per-machine notes: hardware, serials, history
 ```
 
 ## Roadmap
 
-- `k3s/join-agent.sh` — join the node to the cluster with GPU labels
-- cluster side: `RuntimeClass nvidia` + NVIDIA device plugin manifests, test pod
+- [x] `k3s/join-agent.sh` — join the node to the cluster with GPU labels
+- [x] cluster side: `RuntimeClass nvidia` + NVIDIA device plugin manifests, test pod
