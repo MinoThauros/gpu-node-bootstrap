@@ -31,6 +31,9 @@ autoinstall:
     - htop
     - ntfs-3g                # to read the old D: drive (pc-backup) later
   late-commands:
+    # nouveau predates RTX 50 (Blackwell) and blanks the screen on it; keep it off until the NVIDIA driver is in
+    - printf 'blacklist nouveau\noptions nouveau modeset=0\n' > /target/etc/modprobe.d/blacklist-nouveau.conf
+    - curtin in-target --target=/target -- update-initramfs -u
     - mkdir -p /target/opt/gpu-node
     - cp /cdrom/nocloud/gpu-node-setup.sh /target/opt/gpu-node/gpu-node-setup.sh
     - chmod +x /target/opt/gpu-node/gpu-node-setup.sh

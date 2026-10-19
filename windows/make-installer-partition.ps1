@@ -84,7 +84,9 @@ try {
     $cfgPath = "$T\boot\grub\grub.cfg"
     $cfg = Get-Content $cfgPath -Raw
     if ($cfg -notmatch 'AUTOINSTALL GPU node') {
-        $entry = "menuentry `"AUTOINSTALL GPU node (erases disk $TargetDiskSerial only, asks to confirm)`" {`n`tset gfxpayload=keep`n`tlinux`t/casper/vmlinuz ds=nocloud\;s=/cdrom/nocloud/ ---`n`tinitrd`t/casper/initrd`n}`n"
+        # nomodeset: stock nouveau predates RTX 50 and blanks the screen ("out of range"); stay on the firmware framebuffer
+        $entry = "menuentry `"AUTOINSTALL GPU node (erases disk $TargetDiskSerial only, asks to confirm)`" {`n`tset gfxpayload=keep`n`tlinux`t/casper/vmlinuz nomodeset ds=nocloud\;s=/cdrom/nocloud/ ---`n`tinitrd`t/casper/initrd`n}`n" +
+                 "menuentry `"AUTOINSTALL GPU node - fallback: HWE kernel`" {`n`tset gfxpayload=keep`n`tlinux`t/casper/hwe-vmlinuz nomodeset ds=nocloud\;s=/cdrom/nocloud/ ---`n`tinitrd`t/casper/hwe-initrd`n}`n"
         $i = $cfg.IndexOf('menuentry')
         & $lf $cfgPath ($cfg.Substring(0, $i) + $entry + $cfg.Substring($i))
     }

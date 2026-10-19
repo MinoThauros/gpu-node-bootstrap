@@ -25,6 +25,17 @@ Once the old OS is wiped there is nothing left on the box to run scripts from, s
 2. Pick **`UEFI: <installer disk>, Partition N`** (with a USB stick: `UEFI: <stick name>`).
 3. GRUB menu: the first entry, **AUTOINSTALL GPU node**, is pre-selected. Press **Enter** (it auto-starts after 30 s).
 
+### Black screen or "out of range" after picking the entry
+
+Ubuntu 24.04's built-in nouveau driver predates RTX 50 (Blackwell) cards; when it tries to take over the display it
+blanks it. Both AUTOINSTALL entries boot with `nomodeset`, which keeps the console on the firmware framebuffer,
+and the installed system blacklists nouveau until the NVIDIA driver is in. If you still get a black screen:
+
+- Wait ~2 minutes: the first screen can take a while on a slow disk.
+- Try the second entry, **AUTOINSTALL GPU node - fallback: HWE kernel**.
+- Try another output on the card (DisplayPort vs HDMI), and make sure the cable is in the GPU.
+- Don't change the resolution in GRUB (`e` → `gfxmode`): a mode the monitor can't show causes "out of range" on its own.
+
 ## What you'll be asked
 
 | Prompt | What to do |
