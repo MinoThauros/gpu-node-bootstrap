@@ -44,6 +44,9 @@ script defaults to `NVIDIA_DRIVER_BRANCH=615`. Exact package versions can drift 
 | NVIDIA driver | 615.71.09, `server-open`, Ubuntu's prebuilt signed modules (`linux-modules-nvidia-615-server-open-7.0.0-38-generic`) |
 | GPU VBIOS | 98.03.58.40.97 |
 | NVIDIA Container Toolkit | 1.20.1 |
+| Tailscale | `<gpu-host>`, `<tailscale-ip>` (added 2026-10-19) |
+| Docker | Installed 2026-10-19 via get.docker.com, NVIDIA runtime configured |
+| vLLM | `vllm/vllm-openai@sha256:befccf0e7e40…` serving `Qwen/Qwen3-8B-FP8`, see [../serving/vllm.md](../serving/vllm.md) |
 
 | Disk | Layout |
 |---|---|

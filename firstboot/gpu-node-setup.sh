@@ -3,7 +3,8 @@
 # Installs: NVIDIA open server driver, branch NVIDIA_DRIVER_BRANCH (default 615, the branch verified on the
 #           RTX 5070 Ti in Oct 2026); falls back to the newest >= 570 if that branch is no longer in apt.
 #           Set NVIDIA_DRIVER_BRANCH=latest to always take the newest.
-#           + NVIDIA Container Toolkit (k3s picks up the nvidia runtime automatically when it's installed later).
+#           + NVIDIA Container Toolkit (k3s picks up the nvidia runtime automatically when it's installed later)
+#           + Docker Engine with the NVIDIA runtime, for running vLLM standalone (serving/vllm.md).
 # Log: /var/log/gpu-node-setup.log    Re-run: sudo rm /var/lib/gpu-node-setup.done && sudo systemctl start gpu-node-setup
 set -euo pipefail
 exec > >(tee -a /var/log/gpu-node-setup.log) 2>&1
@@ -45,6 +46,12 @@ curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
   > /etc/apt/sources.list.d/nvidia-container-toolkit.list
 apt-get update
 apt-get -y install nvidia-container-toolkit
+
+# Docker Engine (official install script) + NVIDIA runtime, so `docker run --gpus all` works.
+# Not needed by k3s (it uses its own containerd); used to run vLLM standalone (serving/vllm.md).
+curl -fsSL https://get.docker.com | sh
+nvidia-ctk runtime configure --runtime=docker
+systemctl restart docker
 
 # Keep the GPU initialised between jobs (faster pod start, stable clocks)
 systemctl enable nvidia-persistenced 2>/dev/null || true

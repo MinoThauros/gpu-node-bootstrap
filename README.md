@@ -86,7 +86,7 @@ SSH password login allowed (turn off once you've added a key).
    ```
 4. Plug in Ethernet, reboot, boot menu key (F8 on ASUS) → `UEFI: <installer disk>, Partition N`.
 5. Follow [docs/install-walkthrough.md](docs/install-walkthrough.md). About 30 minutes, mostly waiting.
-6. Log in and run `nvidia-smi`.
+6. Log in and run `nvidia-smi`. To serve a model before joining a cluster: [serving/vllm.md](serving/vllm.md).
 7. Join the cluster: [docs/join-cluster.md](docs/join-cluster.md). On the node:
    ```bash
    sudo INSTALL_K3S_VERSION=<server's version> bash join-agent.sh --url https://<server-ip>:6443 --token-file /root/k3s-token
@@ -106,7 +106,7 @@ gpu-node-bootstrap/
 │   ├── user-data                     Ubuntu autoinstall config (template: __TARGET_DISK_SERIAL__)
 │   └── meta-data                     required by cloud-init's nocloud source
 ├── firstboot/
-│   ├── gpu-node-setup.sh             NVIDIA driver + container toolkit, runs once
+│   ├── gpu-node-setup.sh             NVIDIA driver + container toolkit + Docker, runs once
 │   └── gpu-node-setup.service        systemd one-shot unit that runs it
 ├── windows/
 │   └── make-installer-partition.ps1  no-USB installer builder (run from the old Windows)
@@ -120,7 +120,10 @@ gpu-node-bootstrap/
 ├── docs/
 │   ├── install-walkthrough.md        step by step, including what you type
 │   ├── bios-settings.md              firmware settings and why
-│   └── join-cluster.md               token, join script, manifests, verify, troubleshooting
+│   ├── join-cluster.md               token, join script, manifests, verify, troubleshooting
+│   └── journal.md                    what was done, decided and deferred, by date
+├── serving/
+│   └── vllm.md                       run vLLM standalone in Docker, reachable over Tailscale
 └── hosts/
     └── tuf-x570-gpu1.md              per-machine notes: hardware, serials, history
 ```
