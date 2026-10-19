@@ -28,13 +28,23 @@ Once the old OS is wiped there is nothing left on the box to run scripts from, s
 ### Black screen or "out of range" after picking the entry
 
 Ubuntu 24.04's built-in nouveau driver predates RTX 50 (Blackwell) cards; when it tries to take over the display it
-blanks it. Both AUTOINSTALL entries boot with `nomodeset`, which keeps the console on the firmware framebuffer,
-and the installed system blacklists nouveau until the NVIDIA driver is in. If you still get a black screen:
+blanks it or switches to a mode the monitor rejects ("out of range"). Both AUTOINSTALL entries boot with
+`modprobe.blacklist=nouveau nouveau.modeset=0`, which keeps nouveau off so the console stays on the firmware
+framebuffer, and the installed system blacklists nouveau until the NVIDIA driver is in.
+
+Don't use `nomodeset`: in testing it gave a black screen, most likely because on 24.04 it also disables simpledrm
+(the firmware-framebuffer console). Verified on an RTX 5070 Ti over HDMI to an ASUS ROG 34" ultrawide, October 2026.
+
+If you still get a black screen:
 
 - Wait ~2 minutes: the first screen can take a while on a slow disk.
+- Check the GRUB entry (`e`) still reads `... ds=nocloud\;s=/cdrom/nocloud/ modprobe.blacklist=nouveau nouveau.modeset=0 ---`
+  and `set gfxpayload=keep`. Edits made there last for one boot only.
 - Try the second entry, **AUTOINSTALL GPU node - fallback: HWE kernel**.
 - Try another output on the card (DisplayPort vs HDMI), and make sure the cable is in the GPU.
-- Don't change the resolution in GRUB (`e` → `gfxmode`): a mode the monitor can't show causes "out of range" on its own.
+- A white **VGA** Q-LED on the motherboard means the card isn't seated or powered: reseat it with the PC on its side,
+  screw the bracket down, and fill every socket of the power adapter with a full 8-pin PCIe plug (never a CPU/EPS cable).
+- Don't change the resolution in GRUB (`gfxpayload`/`video=`): a mode the monitor can't show causes "out of range" on its own.
 
 ## What you'll be asked
 
@@ -76,7 +86,7 @@ sudo rm -f /var/lib/gpu-node-setup.done && sudo systemctl start gpu-node-setup
 
 1. Write the Ubuntu Server ISO to the stick with Rufus in **ISO mode** (not DD), FAT32.
 2. Copy `autoinstall/user-data` (with `__TARGET_DISK_SERIAL__` replaced), `autoinstall/meta-data` and both `firstboot/` files into a `nocloud/` folder at the root of the stick.
-3. In `boot/grub/grub.cfg` on the stick, add `ds=nocloud\;s=/cdrom/nocloud/` to the first `linux` line, before `---`.
+3. In `boot/grub/grub.cfg` on the stick, add `ds=nocloud\;s=/cdrom/nocloud/ modprobe.blacklist=nouveau nouveau.modeset=0` to the first `linux` line, before `---` (RTX 50 cards need the nouveau part).
 
 ## After the install
 

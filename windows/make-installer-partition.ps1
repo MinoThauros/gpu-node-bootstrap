@@ -84,9 +84,11 @@ try {
     $cfgPath = "$T\boot\grub\grub.cfg"
     $cfg = Get-Content $cfgPath -Raw
     if ($cfg -notmatch 'AUTOINSTALL GPU node') {
-        # nomodeset: stock nouveau predates RTX 50 and blanks the screen ("out of range"); stay on the firmware framebuffer
-        $entry = "menuentry `"AUTOINSTALL GPU node (erases disk $TargetDiskSerial only, asks to confirm)`" {`n`tset gfxpayload=keep`n`tlinux`t/casper/vmlinuz nomodeset ds=nocloud\;s=/cdrom/nocloud/ ---`n`tinitrd`t/casper/initrd`n}`n" +
-                 "menuentry `"AUTOINSTALL GPU node - fallback: HWE kernel`" {`n`tset gfxpayload=keep`n`tlinux`t/casper/hwe-vmlinuz nomodeset ds=nocloud\;s=/cdrom/nocloud/ ---`n`tinitrd`t/casper/hwe-initrd`n}`n"
+        # Block nouveau: stock nouveau predates RTX 50 and blanks the screen ("out of range"). Do NOT use nomodeset:
+        # it gave a black screen in testing, most likely because on 24.04 it also disables simpledrm (the firmware console).
+        # Verified on an RTX 5070 Ti over HDMI, Oct 2026.
+        $entry = "menuentry `"AUTOINSTALL GPU node (erases disk $TargetDiskSerial only, asks to confirm)`" {`n`tset gfxpayload=keep`n`tlinux`t/casper/vmlinuz ds=nocloud\;s=/cdrom/nocloud/ modprobe.blacklist=nouveau nouveau.modeset=0 ---`n`tinitrd`t/casper/initrd`n}`n" +
+                 "menuentry `"AUTOINSTALL GPU node - fallback: HWE kernel`" {`n`tset gfxpayload=keep`n`tlinux`t/casper/hwe-vmlinuz ds=nocloud\;s=/cdrom/nocloud/ modprobe.blacklist=nouveau nouveau.modeset=0 ---`n`tinitrd`t/casper/hwe-initrd`n}`n"
         $i = $cfg.IndexOf('menuentry')
         & $lf $cfgPath ($cfg.Substring(0, $i) + $entry + $cfg.Substring($i))
     }

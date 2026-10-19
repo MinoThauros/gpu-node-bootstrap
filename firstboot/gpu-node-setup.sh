@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Runs once on first boot (gpu-node-setup.service), then reboots so the driver loads.
-# Installs: newest NVIDIA open server driver >= 570 (needed for the RTX 5070 Ti, also drives the 2080)
+# Installs: NVIDIA open server driver, branch NVIDIA_DRIVER_BRANCH (default 615, the branch verified on the
+#           RTX 5070 Ti in Oct 2026); falls back to the newest >= 570 if that branch is no longer in apt.
+#           Set NVIDIA_DRIVER_BRANCH=latest to always take the newest.
 #           + NVIDIA Container Toolkit (k3s picks up the nvidia runtime automatically when it's installed later).
 # Log: /var/log/gpu-node-setup.log    Re-run: sudo rm /var/lib/gpu-node-setup.done && sudo systemctl start gpu-node-setup
 set -euo pipefail
@@ -17,9 +19,16 @@ apt-get update
 apt-get -y full-upgrade
 apt-get -y install ubuntu-drivers-common curl gnupg
 
-# Pick the newest *-server-open driver available, require >= 570 for Blackwell (RTX 50xx)
-ver=$(apt-cache search --names-only '^nvidia-driver-[0-9]+-server-open$' \
+# Driver branch: pinned for reproducible rebuilds, newest >= 570 (Blackwell minimum) as fallback
+NVIDIA_DRIVER_BRANCH="${NVIDIA_DRIVER_BRANCH:-615}"
+newest=$(apt-cache search --names-only '^nvidia-driver-[0-9]+-server-open$' \
       | awk '{print $1}' | sed -E 's/nvidia-driver-([0-9]+)-server-open/\1/' | sort -n | tail -1)
+if [ "$NVIDIA_DRIVER_BRANCH" != "latest" ] && apt-cache show "nvidia-driver-${NVIDIA_DRIVER_BRANCH}-server-open" >/dev/null 2>&1; then
+  ver="$NVIDIA_DRIVER_BRANCH"
+else
+  [ "$NVIDIA_DRIVER_BRANCH" != "latest" ] && echo "WARNING: branch $NVIDIA_DRIVER_BRANCH not in apt, using newest ($newest)"
+  ver="$newest"
+fi
 if [ -z "$ver" ] || [ "$ver" -lt 570 ]; then
   echo "ERROR: no nvidia-driver >=570 server-open in apt (found '${ver:-none}')"; exit 1
 fi
