@@ -21,7 +21,8 @@ sudo docker run -d --name vllm --gpus all --ipc=host \
   -p "$TS_IP":8000:8000 \
   -v ~/.cache/huggingface:/root/.cache/huggingface \
   vllm/vllm-openai@sha256:befccf0e7e4089aa23926bb6f887a85c0d46c2a99e6de5c5ffdf5cb7957c5b34 \
-  --model Qwen/Qwen3-8B-FP8 --max-model-len 8192 --gpu-memory-utilization 0.90
+  --model Qwen/Qwen3-8B-FP8 --max-model-len 8192 --gpu-memory-utilization 0.90 \
+  --enable-auto-tool-choice --tool-call-parser hermes
 ```
 
 The image is pinned by digest (it was `vllm/vllm-openai:latest` on 2026-10-19). RTX 50 cards need a recent vLLM build, so if you move to a newer image, re-test.
@@ -35,6 +36,10 @@ The image is pinned by digest (it was `vllm/vllm-openai:latest` on 2026-10-19). 
 | `--model Qwen/Qwen3-8B-FP8` | Hugging Face repo ID; vLLM downloads `config.json`, tokenizer and `.safetensors` weights at startup. A local folder path also works |
 | `--max-model-len 8192` | Max tokens per conversation; caps per-request KV cache |
 | `--gpu-memory-utilization 0.90` | Share of the 16 GB for weights + KV cache |
+| `--enable-auto-tool-choice` | Accept `tool_choice: "auto"`. Open WebUI sends tools with every chat, and vLLM rejects those requests without this flag |
+| `--tool-call-parser hermes` | Converts Qwen3's `<tool_call>…</tool_call>` text into the API's `tool_calls` field |
+
+Container flags are fixed at creation: to change them, `sudo docker rm -f vllm` and run again (the weights stay in the mounted cache). To free the GPU temporarily, `sudo docker stop vllm`; `sudo docker start vllm` brings it back unchanged.
 
 First start takes 10–30 minutes (image ~10 GB + model ~9 GB). Watch with `sudo docker logs -f vllm`; ready when it prints `Uvicorn running on http://0.0.0.0:8000`.
 

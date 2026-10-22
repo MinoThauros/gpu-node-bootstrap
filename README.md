@@ -123,7 +123,9 @@ gpu-node-bootstrap/
 │   ├── join-cluster.md               token, join script, manifests, verify, troubleshooting
 │   └── journal.md                    what was done, decided and deferred, by date
 ├── serving/
-│   └── vllm.md                       run vLLM standalone in Docker, reachable over Tailscale
+│   ├── vllm.md                       run vLLM standalone in Docker, reachable over Tailscale
+│   ├── compose.yaml                  Open WebUI in front of vLLM (Docker Compose)
+│   └── docling.md                    Docling document parsing on the GPU, run on demand
 └── hosts/
     └── tuf-x570-gpu1.md              per-machine notes: hardware, serials, history
 ```

@@ -2,6 +2,35 @@
 
 What was done, decided and deferred on this node, newest first. The recipe (autoinstall, first-boot script, serving docs) says how to build it; this says what happened and why.
 
+## 2026-10-22: Docling on the GPU
+
+**Done**
+
+- Ran Docling (`docling-serve-cu128:v1.37.0`) on the GPU to convert a 417-page PDF for the RAG lab, with vLLM stopped for the duration. Guide: [../serving/docling.md](../serving/docling.md).
+- Formula enrichment needed `ibm-granite/granite-docling-258M`, which the image doesn't ship and won't auto-download; downloaded it into the container with `docling-tools`.
+
+**Findings**
+
+- During the run: 3.7 of 16 GB GPU memory, ~25% utilization (CPU-side work between batches).
+- On the Mac's CPU image, a whole-book job was killed by Docker Desktop's 7.75 GiB memory cap. Large documents belong here, or in page ranges.
+- vLLM at 90% and Docling don't fit together. Options: stop vLLM during ingestion (current), cap vLLM at ~60–65%, or a second GPU.
+
+**Idea: the spare RTX 2080 as a second GPU**
+
+8 GB, Turing (compute capability 7.5): no FP8 or BF16, so weak for modern quantized LLMs, but enough for Docling, embedding and reranker models. One driver serves both cards; each container gets its own with `--gpus '"device=N"'`. To check first: physical fit next to the 5070 Ti, the second slot's lanes, PCIe power cables (no daisy-chained pigtails).
+
+## 2026-10-20: Open WebUI, tool calling
+
+**Done**
+
+- Open WebUI in front of vLLM with Docker Compose: [../serving/compose.yaml](../serving/compose.yaml), on the node at `~/serving/`. Published on the Tailscale address, port 3000; chats and accounts live in the `serving_open-webui` volume.
+- vLLM recreated with `--enable-auto-tool-choice --tool-call-parser hermes`: Open WebUI sends tools with every chat, and vLLM rejected those requests without a parser.
+
+**Findings**
+
+- `docker attach` connects the terminal to the container's main process, so Ctrl-C there stops vLLM. Use `docker logs -f` to watch.
+- After a vLLM restart, Open WebUI can keep an empty model list ("Model '' was not found"): reload the page and start a new chat.
+
 ## 2026-10-19: Tailscale, Docker, vLLM serving
 
 **Done**
