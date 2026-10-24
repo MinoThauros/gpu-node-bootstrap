@@ -58,10 +58,25 @@ services:
       - open-webui:/app/backend/data
 
   # --- ingest ------------------------------------------------------------------
+  # One-shot init service: downloads the formula model (equations → LaTeX), which
+  # the Docling image doesn't ship, into the shared volume, then exits. Files
+  # already in the volume are kept, so later starts only check. Same pattern as
+  # a Kubernetes init container.
+  docling-models:
+    profiles: [ingest]
+    container_name: docling-models
+    image: quay.io/docling-project/docling-serve-cu128:v1.37.0
+    entrypoint: [docling-tools, models, download-hf-repo, ibm-granite/granite-docling-258M]
+    volumes:
+      - docling-models:/opt/app-root/src/.cache/docling/models
+
   docling:
     profiles: [ingest]
     container_name: docling
     image: quay.io/docling-project/docling-serve-cu128:v1.37.0
+    depends_on:
+      docling-models:
+        condition: service_completed_successfully # start only once the model is in place
     <<: *gpu
     ports:
       - "${TS_IP}:5001:5001"
